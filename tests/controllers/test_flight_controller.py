@@ -40,6 +40,7 @@ async def test_submit_flight_creates_pilot_and_triggers_background_task(monkeypa
     )
 
     payload = FlightSubmissionRequest(
+        video_key="raw/foo.mp4",
         lat=12.34,
         lng=56.78,
         pilot=PilotSubmission(
@@ -57,7 +58,13 @@ async def test_submit_flight_creates_pilot_and_triggers_background_task(monkeypa
         country_code="US",
     )
 
-    result = await controller.submit_flight(payload, "/tmp/video.mp4")
+    monkeypatch.setattr(
+        "app.controllers.flight.s3.build_s3_uri",
+        lambda key: f"s3://bucket/{key}",
+        raising=False,
+    )
+
+    result = await controller.submit_flight(payload)
 
     assert result is created_flight
     user_repo.get_or_create_pilot.assert_awaited_once_with(
@@ -70,7 +77,7 @@ async def test_submit_flight_creates_pilot_and_triggers_background_task(monkeypa
     attrs = flight_repo.create.await_args.args[0]
     assert attrs["pilot_id"] == pilot.id
     assert attrs["status"] == FlightStatus.PENDING
-    assert attrs["video_path"] == "/tmp/video.mp4"
+    assert attrs["video_path"] == "s3://bucket/raw/foo.mp4"
     assert attrs["tags"] == ["urban", "night"]
     mock_delay.assert_called_once_with(created_flight.id)
 
@@ -94,6 +101,7 @@ async def test_submit_flight_without_pilot_leaves_pilot_id_null(monkeypatch):
     )
 
     payload = FlightSubmissionRequest(
+        video_key="raw/foo.mp4",
         lat=1.0,
         lng=2.0,
         pilot=None,
@@ -106,12 +114,18 @@ async def test_submit_flight_without_pilot_leaves_pilot_id_null(monkeypatch):
         country_code="DE",
     )
 
-    await controller.submit_flight(payload, "/tmp/video.mp4")
+    monkeypatch.setattr(
+        "app.controllers.flight.s3.build_s3_uri",
+        lambda key: f"s3://bucket/{key}",
+        raising=False,
+    )
+
+    await controller.submit_flight(payload)
 
     user_repo.get_or_create_pilot.assert_not_awaited()
     attrs = flight_repo.create.await_args.args[0]
     assert attrs["pilot_id"] is None
-    assert attrs["video_path"] == "/tmp/video.mp4"
+    assert attrs["video_path"] == "s3://bucket/raw/foo.mp4"
     mock_delay.assert_called_once_with(created_flight.id)
 
 
