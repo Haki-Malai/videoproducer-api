@@ -19,6 +19,8 @@ services:
       - postgres
     env_file:
       - .env
+    environment:
+      - POSTGRES_HOST=postgres
     ports:
       - "${API_PORT:-8765}:${API_PORT:-8765}"
 

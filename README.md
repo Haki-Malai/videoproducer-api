@@ -25,6 +25,8 @@ Edit `.env` with your own secrets. The available variables are:
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Default admin credentials seeded/used by the service. |
 | `SECRET_KEY` | Secret used for signing JWT tokens. Generate a long random string before running in production. |
 
+When running commands locally through Poetry, keep `POSTGRES_HOST=localhost` (the default) so they connect to the Postgres port exposed on your machine. The Docker Compose configuration overrides this value inside the API container to `postgres`, so you do not need to maintain a separate `.env` file for container workflows.
+
 > The `API_PORT` value is used everywhere (app server, Docker, nginx reverse proxy), so you only need to change it in `.env` for the entire stack to follow.
 
 ## Local Development (Poetry)
