@@ -97,7 +97,7 @@ class BaseRepository(Generic[ModelType]):
         :return: The updated model instance.
         """
         for key, value in attributes.items():
-            if value:
+            if value is not None:
                 setattr(model, key, value)
 
         self.session.add(model)

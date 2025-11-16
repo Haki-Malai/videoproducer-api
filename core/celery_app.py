@@ -14,7 +14,6 @@ celery_app.conf.accept_content = ["json"]
 celery_app.conf.timezone = "UTC"
 celery_app.conf.enable_utc = True
 celery_app.conf.task_routes = {
-    "uploads.*": {"queue": "uploads"},
     "flights.*": {"queue": "flights"},
 }
 
