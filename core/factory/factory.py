@@ -2,16 +2,30 @@ from functools import partial
 
 from fastapi import Depends
 
-from app.controllers import UserController
-from app.models import User
-from app.repositories import UserRepository
+from app.controllers import FlightController, PilotController, UserController
+from app.models import Flight, Pilot, User
+from app.repositories import FlightRepository, PilotRepository, UserRepository
 from core.database import get_session
 
 
 class Factory:
     user_repository = partial(UserRepository, User)
+    pilot_repository = partial(PilotRepository, Pilot)
+    flight_repository = partial(FlightRepository, Flight)
 
     def get_user_controller(self, db_session=Depends(get_session)):
         return UserController(
             user_repository=self.user_repository(db_session=db_session)
+        )
+
+    def get_pilot_controller(self, db_session=Depends(get_session)):
+        return PilotController(
+            pilot_repository=self.pilot_repository(db_session=db_session),
+            flight_repository=self.flight_repository(db_session=db_session),
+        )
+
+    def get_flight_controller(self, db_session=Depends(get_session)):
+        return FlightController(
+            flight_repository=self.flight_repository(db_session=db_session),
+            pilot_repository=self.pilot_repository(db_session=db_session),
         )
