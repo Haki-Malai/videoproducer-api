@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from app.controllers import UserController
 from app.models import Role, User
@@ -95,14 +95,16 @@ async def update_user(
 
 @users_router.delete(
     "/users/{user_id}",
-    dependencies=[Depends(AuthenticationRequired), Depends(require_role(Role.ADMIN))],
+    dependencies=[Depends(AuthenticationRequired), Depends(require_role(Role.MODERATOR))],
     status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
 )
 async def delete_user(
     user_id: int,
     user_controller: UserController = Depends(Factory().get_user_controller),
 ):
-    return await user_controller.delete(user_id)
+    await user_controller.delete(user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @users_router.get(
@@ -113,7 +115,9 @@ async def me(current_user: User = Depends(get_current_user)):
 
 
 @users_router.put(
-    "/me", dependencies=[Depends(AuthenticationRequired)], response_model=UserResponse
+    "/me",
+    dependencies=[Depends(AuthenticationRequired), Depends(require_role(Role.MODERATOR))],
+    response_model=UserResponse,
 )
 async def update_me(
     user_request: UpdateSelfRequest,
@@ -125,12 +129,14 @@ async def update_me(
 
 @users_router.delete(
     "/me",
-    dependencies=[Depends(AuthenticationRequired)],
+    dependencies=[Depends(AuthenticationRequired), Depends(require_role(Role.MODERATOR))],
     response_model=None,
     status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
 )
 async def delete_me(
     user_controller: UserController = Depends(Factory().get_user_controller),
     current_user: UserResponse = Depends(get_current_user),
 ):
-    return await user_controller.delete(current_user.id)
+    await user_controller.delete(current_user.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
