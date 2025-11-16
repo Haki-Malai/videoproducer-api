@@ -29,6 +29,7 @@ ipython = "^8.29.0"
 python-jose = "^3.3.0"
 greenlet = "^3.2.3"
 celery = "^5.5.3"
+boto3 = "^1.40.74"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.3"

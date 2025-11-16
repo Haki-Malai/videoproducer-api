@@ -32,6 +32,13 @@ class Config(BaseSettings):
     CELERY_BROKER_URL: str = "redis://redis:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://redis:6379/1"
 
+    S3_ENDPOINT_URL: str = "http://minio:9000"
+    S3_BUCKET_NAME: str = "skyflow-videos"
+    S3_REGION: str = "us-east-1"
+    S3_ACCESS_KEY_ID: str
+    S3_SECRET_ACCESS_KEY: str
+    S3_PUBLIC_BASE_URL: str
+
     ADMIN_USERNAME: str
     ADMIN_PASSWORD: str
 
