@@ -17,6 +17,7 @@ class Config(BaseSettings):
     RELEASE_VERSION: str = "0.0.1"
     DEBUG: bool = False
     ENVIRONMENT: EnvironmentType = EnvironmentType.DEVELOPMENT
+    API_PORT: int = 8765
 
     SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"

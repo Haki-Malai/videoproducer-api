@@ -15,7 +15,7 @@ def get_application():
         uvicorn.run(
             app="core.server:app",
             host="0.0.0.0",
-            port=8000,
+            port=config.API_PORT,
             reload=config.ENVIRONMENT != "production",
             workers=1,
             log_level="info",
