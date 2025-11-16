@@ -1,6 +1,8 @@
 import asyncio
 import logging
+import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -32,76 +34,98 @@ async def _async_process_new_flight(flight_id: int) -> None:
                 logger.warning("Flight %s not found; skipping", flight_id)
                 return
 
-            # Source video path as stored by submit_flight (relative to /opt/app)
-            src_path = Path(flight.video_path)
-            if not src_path.is_absolute():
-                src_path = Path.cwd() / src_path
-
-            if not src_path.exists():
-                logger.warning(
-                    "Source video not found for flight %s at %s", flight_id, src_path
-                )
+            # Fetch the source video either from disk or S3
+            source_ref = flight.video_path
+            if not source_ref:
+                logger.warning("Flight %s has no source video reference", flight_id)
                 return
+            temp_dir: Path | None = None
 
-            # Local HLS output directory
-            out_dir = HLS_ROOT / str(flight_id)
-            out_dir.mkdir(parents=True, exist_ok=True)
-            manifest_path = out_dir / "index.m3u8"
-
-            # Simple HLS generation: copy codecs, no re-encode (fast for dev)
-            cmd = [
-                "ffmpeg",
-                "-y",
-                "-i",
-                str(src_path),
-                "-codec",
-                "copy",
-                "-start_number",
-                "0",
-                "-hls_time",
-                "4",
-                "-hls_playlist_type",
-                "vod",
-                "-hls_segment_filename",
-                str(out_dir / "segment_%03d.ts"),
-                str(manifest_path),
-            ]
-            logger.info("Running ffmpeg for flight %s", flight_id)
-            subprocess.run(
-                cmd,
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-
-            # Upload HLS assets to S3/MinIO
-            for path in sorted(out_dir.iterdir()):
-                if path.is_dir():
-                    continue
-
-                name = path.name
-                key = f"hls/{flight_id}/{name}"
-
-                if name.endswith(".m3u8"):
-                    content_type = "application/vnd.apple.mpegurl"
-                elif name.endswith(".ts"):
-                    content_type = "video/MP2T"
+            try:
+                if s3.is_s3_uri(source_ref):
+                    temp_dir = Path(tempfile.mkdtemp(prefix="flight-src-"))
+                    src_path = temp_dir / "source_video"
+                    logger.info(
+                        "Downloading source video for flight %s from %s",
+                        flight_id,
+                        source_ref,
+                    )
+                    s3.download_file(source_ref, str(src_path))
                 else:
-                    content_type = "application/octet-stream"
+                    src_path = Path(source_ref)
+                    if not src_path.is_absolute():
+                        src_path = Path.cwd() / src_path
 
-                s3.upload_file(str(path), key, content_type=content_type)
+                if not src_path.exists():
+                    logger.warning(
+                        "Source video not found for flight %s at %s",
+                        flight_id,
+                        src_path,
+                    )
+                    return
 
-            manifest_key = f"hls/{flight_id}/index.m3u8"
-            public_url = s3.build_public_url(manifest_key)
+                # Local HLS output directory
+                out_dir = HLS_ROOT / str(flight_id)
+                out_dir.mkdir(parents=True, exist_ok=True)
+                manifest_path = out_dir / "index.m3u8"
 
-            flight.video_path = public_url
-            await session.commit()
+                # Simple HLS generation: copy codecs, no re-encode (fast for dev)
+                cmd = [
+                    "ffmpeg",
+                    "-y",
+                    "-i",
+                    str(src_path),
+                    "-codec",
+                    "copy",
+                    "-start_number",
+                    "0",
+                    "-hls_time",
+                    "4",
+                    "-hls_playlist_type",
+                    "vod",
+                    "-hls_segment_filename",
+                    str(out_dir / "segment_%03d.ts"),
+                    str(manifest_path),
+                ]
+                logger.info("Running ffmpeg for flight %s", flight_id)
+                subprocess.run(
+                    cmd,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
 
-            logger.info(
-                "Flight %s HLS published at %s",
-                flight_id,
-                public_url,
-            )
+                # Upload HLS assets to S3/MinIO
+                for path in sorted(out_dir.iterdir()):
+                    if path.is_dir():
+                        continue
+
+                    name = path.name
+                    key = f"hls/{flight_id}/{name}"
+
+                    if name.endswith(".m3u8"):
+                        content_type = "application/vnd.apple.mpegurl"
+                    elif name.endswith(".ts"):
+                        content_type = "video/MP2T"
+                    else:
+                        content_type = "application/octet-stream"
+
+                    s3.upload_file(str(path), key, content_type=content_type)
+
+                manifest_key = f"hls/{flight_id}/index.m3u8"
+                public_url = s3.build_public_url(manifest_key)
+
+                flight.video_path = public_url
+                await session.commit()
+
+                logger.info(
+                    "Flight %s HLS published at %s",
+                    flight_id,
+                    public_url,
+                )
+            finally:
+                if temp_dir:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
     except Exception:  # noqa: BLE001 - log everything here
         logger.exception("Error while processing flight %s", flight_id)
         raise

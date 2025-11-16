@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
-from pydantic import ValidationError
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.controllers.flight import FlightController
 from app.models import Role
@@ -14,39 +12,15 @@ from app.models.flight import FlightStatus, FlightTheme
 from app.schemas.requests.flights import (
     FlightSubmissionRequest,
     FlightUpdateRequest,
+    FlightUploadRequest,
 )
-from app.schemas.responses.flights import FlightResponse
+from app.schemas.responses.flights import FlightResponse, FlightUploadInitResponse
 from core.factory import Factory
-from core.exceptions import BadRequestException
 from core.fastapi.dependencies import AuthenticationRequired
 from core.security.require_role import require_role
+from core.storage import s3
 
 flights_router = APIRouter(prefix="/flights", tags=["Flights"])
-
-VIDEO_UPLOAD_DIR = Path("uploads/flights")
-VIDEO_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-
-async def _save_uploaded_video(file: UploadFile) -> str:
-    suffix = Path(file.filename or "").suffix
-    dest = VIDEO_UPLOAD_DIR / f"{uuid4().hex}{suffix}"
-    with dest.open("wb") as buffer:
-        while chunk := await file.read(1024 * 1024):
-            buffer.write(chunk)
-    await file.close()
-    return str(dest)
-
-
-def _parse_submission_payload(raw_payload: str) -> FlightSubmissionRequest:
-    try:
-        data = json.loads(raw_payload)
-    except json.JSONDecodeError as exc:
-        raise BadRequestException("Invalid flight payload") from exc
-
-    try:
-        return FlightSubmissionRequest.model_validate(data)
-    except ValidationError as exc:
-        raise BadRequestException("Invalid flight payload") from exc
 
 
 def _parse_bbox(bbox: str | None) -> tuple[float, float, float, float] | None:
@@ -60,19 +34,38 @@ def _parse_bbox(bbox: str | None) -> tuple[float, float, float, float] | None:
 
 
 @flights_router.post(
+    "/upload-url",
+    response_model=FlightUploadInitResponse,
+    dependencies=[Depends(AuthenticationRequired), Depends(require_role(Role.MODERATOR))],
+)
+async def create_flight_upload_url(
+    payload: FlightUploadRequest,
+) -> FlightUploadInitResponse:
+    suffix = Path(payload.filename or "").suffix
+    key = f"flights/raw/{uuid4().hex}{suffix}"
+    presigned = s3.generate_presigned_upload(
+        key,
+        content_type=payload.content_type,
+        max_file_size=payload.max_file_size,
+    )
+    return FlightUploadInitResponse(
+        key=key,
+        url=presigned["url"],
+        fields=presigned["fields"],
+    )
+
+
+@flights_router.post(
     "",
     response_model=FlightResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(AuthenticationRequired), Depends(require_role(Role.MODERATOR))],
 )
 async def submit_flight(
-    metadata: str = Form(..., description="JSON encoded flight metadata"),
-    video: UploadFile = File(...),
+    payload: FlightSubmissionRequest,
     flight_controller: FlightController = Depends(Factory().get_flight_controller),
 ) -> FlightResponse:
-    payload = _parse_submission_payload(metadata)
-    video_path = await _save_uploaded_video(video)
-    flight = await flight_controller.submit_flight(payload, video_path)
+    flight = await flight_controller.submit_flight(payload)
     return flight
 
 

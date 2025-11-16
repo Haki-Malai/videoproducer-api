@@ -28,6 +28,9 @@ class PilotSubmission(BaseModel):
 
 
 class FlightSubmissionRequest(BaseModel):
+    video_key: str = Field(
+        ..., description="S3/MinIO object key where the source video lives", min_length=1
+    )
     lat: float = Field(..., ge=-90, le=90)
     lng: float = Field(..., ge=-180, le=180)
 
@@ -68,3 +71,19 @@ class FlightUpdateRequest(BaseModel):
     status: FlightStatus | None = None
     rejected_reason: str | None = None
     pilot_id: int | None = None
+
+
+class FlightUploadRequest(BaseModel):
+    filename: str | None = Field(
+        default=None,
+        description="Optional original filename used to preserve the extension",
+    )
+    content_type: str | None = Field(
+        default=None,
+        description="MIME type to enforce on the presigned upload",
+    )
+    max_file_size: int | None = Field(
+        default=None,
+        ge=1,
+        description="Optional upload size limit in bytes",
+    )

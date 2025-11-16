@@ -61,3 +61,9 @@ class FlightSummary(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class FlightUploadInitResponse(BaseModel):
+    key: str
+    url: str
+    fields: dict[str, str]

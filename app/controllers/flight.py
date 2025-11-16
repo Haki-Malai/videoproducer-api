@@ -11,6 +11,7 @@ from app.schemas.requests.flights import FlightSubmissionRequest
 from app.tasks.flights import process_new_flight
 from core.controller import BaseController
 from core.exceptions import BadRequestException
+from core.storage import s3
 
 
 class FlightController(BaseController[Flight]):
@@ -23,9 +24,7 @@ class FlightController(BaseController[Flight]):
         self.flight_repository = flight_repository
         self.user_repository = user_repository
 
-    async def submit_flight(
-        self, payload: FlightSubmissionRequest, video_path: str
-    ) -> Flight:
+    async def submit_flight(self, payload: FlightSubmissionRequest) -> Flight:
         pilot = None
         if payload.pilot:
             pilot = await self.user_repository.get_or_create_pilot(
@@ -36,10 +35,12 @@ class FlightController(BaseController[Flight]):
                 social=payload.pilot.social_links,
             )
 
+        raw_video_uri = s3.build_s3_uri(payload.video_key)
+
         attributes: dict[str, Any] = {
             "pilot_id": pilot.id if pilot else None,
             "status": FlightStatus.PENDING,
-            "video_path": video_path,
+            "video_path": raw_video_uri,
             "title": payload.title,
             "description": payload.description,
             "lat": payload.lat,
