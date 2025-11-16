@@ -11,63 +11,18 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
 
-  redis:
-    image: redis:7
-    restart: always
-    ports:
-      - "6379:6379"
-
-  minio:
-    image: minio/minio
-    restart: always
-    command: server /data --console-address ":9001"
-    environment:
-      - MINIO_ROOT_USER=${S3_ACCESS_KEY_ID}
-      - MINIO_ROOT_PASSWORD=${S3_SECRET_ACCESS_KEY}
-    volumes:
-      - minio-data:/data
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-
   api:
     build:
       context: .
     restart: always
     depends_on:
       - postgres
-      - redis
-      - minio
     env_file:
       - .env
     environment:
       - POSTGRES_HOST=postgres
     ports:
       - "${API_PORT:-8765}:${API_PORT:-8765}"
-    volumes:
-      - uploads:/opt/app/uploads
-
-  worker:
-    build:
-      context: .
-    restart: always
-    depends_on:
-      - postgres
-      - redis
-      - minio
-    env_file:
-      - .env
-    environment:
-      - POSTGRES_HOST=postgres
-    volumes:
-      - uploads:/opt/app/uploads
-    command: >
-      poetry run celery
-      -A core.celery_app.celery_app
-      worker
-      -Q flights
-      -l info
-
   nginx:
     image: nginx:latest
     volumes:
@@ -85,8 +40,6 @@ services:
 
 volumes:
   pg-data:
-  uploads:
-  minio-data:
 
 networks:
   default:

@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -21,7 +21,7 @@ def make_controller(
 
 
 @pytest.mark.asyncio
-async def test_submit_flight_creates_pilot_and_triggers_background_task(monkeypatch):
+async def test_submit_flight_creates_pilot_and_stores_video_url(monkeypatch):
     created_flight = SimpleNamespace(id=321)
     flight_repo = SimpleNamespace()
     flight_repo.create = AsyncMock(return_value=created_flight)
@@ -32,15 +32,8 @@ async def test_submit_flight_creates_pilot_and_triggers_background_task(monkeypa
 
     controller = make_controller(flight_repo=flight_repo, user_repo=user_repo)
 
-    mock_delay = MagicMock()
-    monkeypatch.setattr(
-        "app.controllers.flight.process_new_flight.delay",
-        mock_delay,
-        raising=False,
-    )
-
     payload = FlightSubmissionRequest(
-        video_key="raw/foo.mp4",
+        video_url="https://youtu.be/foo",
         lat=12.34,
         lng=56.78,
         pilot=PilotSubmission(
@@ -58,12 +51,6 @@ async def test_submit_flight_creates_pilot_and_triggers_background_task(monkeypa
         country_code="US",
     )
 
-    monkeypatch.setattr(
-        "app.controllers.flight.s3.build_s3_uri",
-        lambda key: f"s3://bucket/{key}",
-        raising=False,
-    )
-
     result = await controller.submit_flight(payload)
 
     assert result is created_flight
@@ -77,13 +64,12 @@ async def test_submit_flight_creates_pilot_and_triggers_background_task(monkeypa
     attrs = flight_repo.create.await_args.args[0]
     assert attrs["pilot_id"] == pilot.id
     assert attrs["status"] == FlightStatus.PENDING
-    assert attrs["video_path"] == "s3://bucket/raw/foo.mp4"
+    assert attrs["video_url"] == "https://youtu.be/foo"
     assert attrs["tags"] == ["urban", "night"]
-    mock_delay.assert_called_once_with(created_flight.id)
 
 
 @pytest.mark.asyncio
-async def test_submit_flight_without_pilot_leaves_pilot_id_null(monkeypatch):
+async def test_submit_flight_without_pilot_leaves_pilot_id_null():
     created_flight = SimpleNamespace(id=111)
     flight_repo = SimpleNamespace()
     flight_repo.create = AsyncMock(return_value=created_flight)
@@ -93,15 +79,8 @@ async def test_submit_flight_without_pilot_leaves_pilot_id_null(monkeypatch):
 
     controller = make_controller(flight_repo=flight_repo, user_repo=user_repo)
 
-    mock_delay = MagicMock()
-    monkeypatch.setattr(
-        "app.controllers.flight.process_new_flight.delay",
-        mock_delay,
-        raising=False,
-    )
-
     payload = FlightSubmissionRequest(
-        video_key="raw/foo.mp4",
+        video_url="https://youtu.be/foo",
         lat=1.0,
         lng=2.0,
         pilot=None,
@@ -114,19 +93,12 @@ async def test_submit_flight_without_pilot_leaves_pilot_id_null(monkeypatch):
         country_code="DE",
     )
 
-    monkeypatch.setattr(
-        "app.controllers.flight.s3.build_s3_uri",
-        lambda key: f"s3://bucket/{key}",
-        raising=False,
-    )
-
     await controller.submit_flight(payload)
 
     user_repo.get_or_create_pilot.assert_not_awaited()
     attrs = flight_repo.create.await_args.args[0]
     assert attrs["pilot_id"] is None
-    assert attrs["video_path"] == "s3://bucket/raw/foo.mp4"
-    mock_delay.assert_called_once_with(created_flight.id)
+    assert attrs["video_url"] == "https://youtu.be/foo"
 
 
 @pytest.mark.parametrize("metric", ["flights", "credits", "views"])

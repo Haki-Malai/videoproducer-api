@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AnyHttpUrl, BaseModel, EmailStr, Field
 
 from app.models.flight import FlightStatus, FlightTheme
 
@@ -28,8 +28,9 @@ class PilotSubmission(BaseModel):
 
 
 class FlightSubmissionRequest(BaseModel):
-    video_key: str = Field(
-        ..., description="S3/MinIO object key where the source video lives", min_length=1
+    video_url: AnyHttpUrl = Field(
+        ...,
+        description="Public video URL (YouTube link) showcasing the flight",
     )
     lat: float = Field(..., ge=-90, le=90)
     lng: float = Field(..., ge=-180, le=180)
@@ -72,18 +73,3 @@ class FlightUpdateRequest(BaseModel):
     rejected_reason: str | None = None
     pilot_id: int | None = None
 
-
-class FlightUploadRequest(BaseModel):
-    filename: str | None = Field(
-        default=None,
-        description="Optional original filename used to preserve the extension",
-    )
-    content_type: str | None = Field(
-        default=None,
-        description="MIME type to enforce on the presigned upload",
-    )
-    max_file_size: int | None = Field(
-        default=None,
-        ge=1,
-        description="Optional upload size limit in bytes",
-    )

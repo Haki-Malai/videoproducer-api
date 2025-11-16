@@ -39,7 +39,7 @@ class Flight(Base, TimestampMixin):
         index=True,
     )
 
-    video_path: so.Mapped[str] = so.mapped_column(sa.String(512))
+    video_url: so.Mapped[str] = so.mapped_column("video_path", sa.String(512))
 
     title: so.Mapped[str | None] = so.mapped_column(sa.String(200))
     description: so.Mapped[str | None] = so.mapped_column(sa.Text)

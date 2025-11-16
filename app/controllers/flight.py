@@ -8,10 +8,8 @@ from app.models.flight import Flight, FlightStatus
 from app.repositories.flights import FlightRepository
 from app.repositories.users import UserRepository
 from app.schemas.requests.flights import FlightSubmissionRequest
-from app.tasks.flights import process_new_flight
 from core.controller import BaseController
 from core.exceptions import BadRequestException
-from core.storage import s3
 
 
 class FlightController(BaseController[Flight]):
@@ -35,12 +33,10 @@ class FlightController(BaseController[Flight]):
                 social=payload.pilot.social_links,
             )
 
-        raw_video_uri = s3.build_s3_uri(payload.video_key)
-
         attributes: dict[str, Any] = {
             "pilot_id": pilot.id if pilot else None,
             "status": FlightStatus.PENDING,
-            "video_path": raw_video_uri,
+            "video_url": str(payload.video_url),
             "title": payload.title,
             "description": payload.description,
             "lat": payload.lat,
@@ -52,11 +48,7 @@ class FlightController(BaseController[Flight]):
             "tags": payload.tags or [],
         }
 
-        flight = await self.repository.create(attributes)
-
-        process_new_flight.delay(flight.id)
-
-        return flight
+        return await self.repository.create(attributes)
 
     async def list_public(
         self,

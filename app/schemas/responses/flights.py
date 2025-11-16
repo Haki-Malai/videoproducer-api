@@ -21,7 +21,7 @@ class PilotSummary(BaseModel):
 
 class FlightResponse(BaseResponse):
     status: FlightStatus
-    video_path: str
+    video_url: str
 
     title: str | None = None
     description: str | None = None
@@ -51,7 +51,7 @@ class FlightResponse(BaseResponse):
 class FlightSummary(BaseModel):
     id: int
     title: str | None = None
-    video_path: str
+    video_url: str
     lat: float
     lng: float
     country_code: str | None = None
@@ -61,9 +61,3 @@ class FlightSummary(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class FlightUploadInitResponse(BaseModel):
-    key: str
-    url: str
-    fields: dict[str, str]

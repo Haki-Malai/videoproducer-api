@@ -1,6 +1,6 @@
 # SkyFlow API
 
-SkyFlow API is a FastAPI service for managing drone flight videos and pilot information. The project uses Poetry for dependency management, Celery for background jobs, and provides a Docker-based local stack (Postgres + API + nginx) for quick startup.
+SkyFlow API is a FastAPI service for managing drone flight videos and pilot information. The project uses Poetry for dependency management and provides a Docker-based local stack (Postgres + API + nginx) for quick startup.
 
 ## Prerequisites
 
@@ -52,37 +52,24 @@ poetry run python -m cli fake generate --users 5 --flights-per-user 3
 
 All generated users share the same password (override with `--password`) so you can quickly log in with any account while showcasing the product.
 
-## Direct Video Upload Flow
+## Submitting Flights
 
-Flights are now submitted by uploading the raw MP4 directly from the browser to S3/MinIO and only sending metadata to the API:
+Flights no longer require uploading raw footage to the API. Instead, provide a public YouTube URL alongside the usual metadata:
 
-1. Request a presigned upload URL:
+```bash
+curl -X POST http://localhost:8765/api/v1/flights \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "video_url": "https://youtu.be/abc123xyz78",
+        "lat": 51.5,
+        "lng": -0.12,
+        "title": "Evening cruise",
+        "duration_seconds": 180
+      }'
+```
 
-    ```bash
-    curl -X POST http://localhost:8765/api/v1/flights/upload-url \
-      -H "Authorization: Bearer <token>" \
-      -H "Content-Type: application/json" \
-      -d '{"filename": "raw.mp4", "content_type": "video/mp4"}'
-    ```
-
-    The response contains a unique `key`, the S3 `url`, and form `fields`. Post the video file directly to that URL from the browser.
-
-2. After the upload succeeds, submit the metadata and the returned `key` to the API:
-
-    ```bash
-    curl -X POST http://localhost:8765/api/v1/flights \
-      -H "Authorization: Bearer <token>" \
-      -H "Content-Type: application/json" \
-      -d '{
-            "video_key": "flights/raw/abc123.mp4",
-            "lat": 51.5,
-            "lng": -0.12,
-            "title": "Evening cruise",
-            "duration_seconds": 180
-          }'
-    ```
-
-The backend downloads the referenced object during background processing, converts it to HLS, and swaps `video_path` with the public manifest URL once complete.
+The API stores the YouTube link directly and immediately exposes it to moderators and the public flight listing once approved.
 
 ## Docker Workflow
 
@@ -110,4 +97,3 @@ poetry run pytest
 ## Additional Notes
 
 - When deploying, base your secrets file on `.env.example` but never commit the actual `.env`.
-- Celery broker/result URLs default to Redis but can be overridden through `CELERY_BROKER_URL` and `CELERY_RESULT_BACKEND` environment variables if needed.

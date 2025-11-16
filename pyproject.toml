@@ -8,7 +8,6 @@ license = "MIT"  # Specify your project's license
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
 fastapi = { version = ">=0.114.2,<1.0.0", extras = ["standard"] }
-python-multipart = "^0.0.7"
 email-validator = "^2.1.0.post1"
 passlib = { version = "^1.7.4", extras = ["bcrypt"] }
 tenacity = "^8.2.3"
@@ -28,9 +27,6 @@ asyncpg = "^0.30.0"
 ipython = "^8.29.0"
 python-jose = "^3.3.0"
 greenlet = "^3.2.3"
-celery = "^5.5.3"
-boto3 = "^1.40.74"
-
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.3"
 mypy = "^1.8.0"

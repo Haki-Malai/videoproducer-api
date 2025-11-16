@@ -1,24 +1,17 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.controllers.flight import FlightController
 from app.models import Role
 from app.models.flight import FlightStatus, FlightTheme
-from app.schemas.requests.flights import (
-    FlightSubmissionRequest,
-    FlightUpdateRequest,
-    FlightUploadRequest,
-)
-from app.schemas.responses.flights import FlightResponse, FlightUploadInitResponse
+from app.schemas.requests.flights import FlightSubmissionRequest, FlightUpdateRequest
+from app.schemas.responses.flights import FlightResponse
 from core.factory import Factory
 from core.fastapi.dependencies import AuthenticationRequired
 from core.security.require_role import require_role
-from core.storage import s3
 
 flights_router = APIRouter(prefix="/flights", tags=["Flights"])
 
@@ -31,28 +24,6 @@ def _parse_bbox(bbox: str | None) -> tuple[float, float, float, float] | None:
         raise ValueError("bbox must be 'min_lng,min_lat,max_lng,max_lat'")
     min_lng, min_lat, max_lng, max_lat = map(float, parts)
     return min_lng, min_lat, max_lng, max_lat
-
-
-@flights_router.post(
-    "/upload-url",
-    response_model=FlightUploadInitResponse,
-    dependencies=[Depends(AuthenticationRequired), Depends(require_role(Role.MODERATOR))],
-)
-async def create_flight_upload_url(
-    payload: FlightUploadRequest,
-) -> FlightUploadInitResponse:
-    suffix = Path(payload.filename or "").suffix
-    key = f"flights/raw/{uuid4().hex}{suffix}"
-    presigned = s3.generate_presigned_upload(
-        key,
-        content_type=payload.content_type,
-        max_file_size=payload.max_file_size,
-    )
-    return FlightUploadInitResponse(
-        key=key,
-        url=presigned["url"],
-        fields=presigned["fields"],
-    )
 
 
 @flights_router.post(

@@ -21,7 +21,6 @@ DRONE_TYPES = [
     "Camera Drone",
     "Long Range FPV",
 ]
-VIDEO_EXTENSIONS = ("mp4", "mov", "mkv")
 THEMES = list(FlightTheme)
 STATUS_WEIGHTS: dict[FlightStatus, float] = {
     FlightStatus.PENDING: 0.5,
@@ -107,7 +106,7 @@ async def _create_demo_flights(
             flight = Flight(
                 pilot=user,
                 status=status,
-                video_path=f"/videos/{uuid.uuid4()}.{random.choice(VIDEO_EXTENSIONS)}",
+                video_url=f"https://youtu.be/{uuid.uuid4().hex[:11]}",
                 title=faker.sentence(nb_words=6).rstrip("."),
                 description=faker.paragraph(nb_sentences=3),
                 lat=round(random.uniform(-75, 75), 6),
