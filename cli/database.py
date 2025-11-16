@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models import Base, Role, User
 from core.config import config
+from core.database.migration import prepare_database
 
 app = typer.Typer()
 
@@ -22,11 +23,10 @@ def get_async_engine() -> AsyncEngine:
 
 async def async_init():
     """Initialize the database."""
-    engine = get_async_engine()
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        print("Database initialized.")
+    await prepare_database()
+    print("Database initialized.")
 
+    engine = get_async_engine()
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async with async_session() as session:

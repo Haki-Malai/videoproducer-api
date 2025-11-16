@@ -6,6 +6,7 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 
 from api import router
 from core.config import config
+from core.database.migration import prepare_database
 from core.exceptions import CustomException
 from core.fastapi.dependencies import Logging
 from core.fastapi.middlewares import (
@@ -37,6 +38,10 @@ def init_listeners(app_: FastAPI) -> None:
             status_code=exc.status_code,
             content={"message": exc.message, "description": exc.description},
         )
+
+    @app_.on_event("startup")
+    async def ensure_database_ready():
+        await prepare_database()
 
 
 def make_middleware() -> list[Middleware]:
