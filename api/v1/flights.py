@@ -9,6 +9,7 @@ from app.models import Role
 from app.models.flight import FlightStatus, FlightTheme
 from app.schemas.requests.flights import FlightSubmissionRequest, FlightUpdateRequest
 from app.schemas.responses.flights import FlightResponse
+from core.exceptions import BadRequestException
 from core.factory import Factory
 from core.fastapi.dependencies import AuthenticationRequired
 from core.security.require_role import require_role
@@ -85,7 +86,12 @@ async def list_flights(
     if tags:
         filters["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
 
-    bbox_tuple = _parse_bbox(bbox) if bbox else None
+    bbox_tuple = None
+    if bbox:
+        try:
+            bbox_tuple = _parse_bbox(bbox)
+        except ValueError as exc:
+            raise BadRequestException(str(exc))
 
     flights = await flight_controller.list_public(
         bbox=bbox_tuple, filters=filters, limit=limit, offset=offset

@@ -1,14 +1,14 @@
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from starlette.middleware.authentication import AuthenticationMiddleware
 
 from api import router
 from core.config import config
 from core.database.migration import prepare_database
-from core.exceptions import CustomException
 from core.fastapi.dependencies import Logging
+from core.fastapi.exception_handlers import register_exception_handlers
 from core.fastapi.middlewares import (
     AuthenticationBackend,
     ResponseLoggerMiddleware,
@@ -29,15 +29,7 @@ def init_listeners(app_: FastAPI) -> None:
 
     :param app_: The FastAPI application.
     """
-
-    @app_.exception_handler(CustomException)
-    async def custom_exception_handler(
-        request: Request, exc: CustomException  # noqa: ARG001
-    ):
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"message": exc.message, "description": exc.description},
-        )
+    register_exception_handlers(app_)
 
     @app_.on_event("startup")
     async def ensure_database_ready():
