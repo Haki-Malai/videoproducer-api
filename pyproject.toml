@@ -1,0 +1,68 @@
+[tool.poetry]
+name = "app"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+license = "MIT"  # Specify your project's license
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+fastapi = { version = ">=0.114.2,<1.0.0", extras = ["standard"] }
+python-multipart = "^0.0.7"
+email-validator = "^2.1.0.post1"
+passlib = { version = "^1.7.4", extras = ["bcrypt"] }
+tenacity = "^8.2.3"
+pydantic = "^2.0"
+emails = "^0.6"
+jinja2 = "^3.1.4"
+alembic = "^1.12.1"
+httpx = "^0.25.1"
+psycopg = { version = "^3.1.13", extras = ["binary"] }
+bcrypt = "4.0.1"
+pydantic-settings = "^2.2.1"
+pyjwt = "^2.8.0"
+sqlalchemy = "^2.0.35"
+psycopg2-binary = "^2.9.10"
+nest-asyncio = "^1.6.0"
+asyncpg = "^0.30.0"
+ipython = "^8.29.0"
+python-jose = "^3.3.0"
+greenlet = "^3.2.3"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.4.3"
+mypy = "^1.8.0"
+ruff = "^0.2.2"
+pre-commit = "^3.6.2"
+types-passlib = "^1.7.7.20240106"
+coverage = "^7.4.3"
+pytest-asyncio = "^0.23.8"
+faker = "^30.8.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+strict = true
+exclude = ["venv", ".venv", "alembic"]
+
+[tool.ruff]
+target-version = "py310"
+exclude = ["alembic"]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    "C4",
+    "UP",
+    "ARG001",
+]
+ignore = [
+    "E501",
+    "B008",
+    "W191",
+    "B904",
+]
