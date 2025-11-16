@@ -42,6 +42,16 @@ Alternatively, run the convenience entry point that mirrors production flags:
 poetry run python main.py
 ```
 
+## Generating Demo Data
+
+Populate the local database with demo users and flights using the CLI:
+
+```bash
+poetry run python -m cli fake generate --users 5 --flights-per-user 3
+```
+
+All generated users share the same password (override with `--password`) so you can quickly log in with any account while showcasing the product.
+
 ## Docker Workflow
 
 To start Postgres, the API, and nginx locally:
