@@ -30,7 +30,7 @@ class Flight(Base, TimestampMixin):
 
     id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
     pilot_id: so.Mapped[int | None] = so.mapped_column(
-        sa.Integer, sa.ForeignKey("pilots.id"), nullable=True, index=True
+        sa.Integer, sa.ForeignKey("users.id"), nullable=True, index=True
     )
 
     status: so.Mapped[FlightStatus] = so.mapped_column(
@@ -39,8 +39,7 @@ class Flight(Base, TimestampMixin):
         index=True,
     )
 
-    video_url: so.Mapped[str] = so.mapped_column(sa.String(512))
-    video_provider: so.Mapped[str] = so.mapped_column(sa.String(32))
+    video_path: so.Mapped[str] = so.mapped_column(sa.String(512))
 
     title: so.Mapped[str | None] = so.mapped_column(sa.String(200))
     description: so.Mapped[str | None] = so.mapped_column(sa.Text)
@@ -68,8 +67,8 @@ class Flight(Base, TimestampMixin):
     approved_at: so.Mapped[datetime | None] = so.mapped_column(sa.DateTime)
     rejected_reason: so.Mapped[str | None] = so.mapped_column(sa.String(255))
 
-    pilot: so.Mapped["Pilot | None"] = so.relationship(
-        "Pilot", back_populates="flights", lazy="joined"
+    pilot: so.Mapped["User | None"] = so.relationship(
+        "User", back_populates="flights", lazy="joined"
     )
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper

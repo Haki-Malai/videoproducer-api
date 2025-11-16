@@ -1,7 +1,7 @@
 import re
 from datetime import date
 
-from pydantic import BaseModel, constr, field_validator
+from pydantic import BaseModel, EmailStr, constr, field_validator
 
 from app.models import Role
 from core.exceptions import BadRequestException
@@ -9,6 +9,12 @@ from core.exceptions import BadRequestException
 
 class BaseUserRequest(BaseModel):
     username: str
+    email: EmailStr | None = None
+    display_name: str | None = None
+    country_code: constr(min_length=2, max_length=2) | None = None
+    instagram_url: str | None = None
+    youtube_url: str | None = None
+    website_url: str | None = None
 
     @field_validator("username")
     def username_must_not_contain_special_characters(cls, v):
@@ -19,12 +25,14 @@ class BaseUserRequest(BaseModel):
 
 class RegisterUserRequest(BaseUserRequest):
     password: constr(min_length=8, max_length=64)
+    role: Role = Role.USER
 
 
 class UpdateUserRequest(BaseUserRequest):
     username: constr(min_length=3, max_length=64) | None = None
     role: Role | None = None
     password: constr(min_length=8, max_length=64) | None = None
+    total_credits: int | None = None
 
 
 class UpdateSelfRequest(BaseUserRequest):

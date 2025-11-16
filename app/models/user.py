@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 
@@ -15,6 +17,19 @@ class User(Base, TimestampMixin):
     username: so.Mapped[str] = so.mapped_column(sa.String(64), unique=True, index=True)
     password_hash: so.Mapped[str] = so.mapped_column(sa.String(256))
     role: so.Mapped[Role] = so.mapped_column(sa.Enum(Role), default=Role.USER)
+
+    display_name: so.Mapped[str | None] = so.mapped_column(sa.String(128))
+    email: so.Mapped[str | None] = so.mapped_column(sa.String(256), unique=True, index=True)
+    country_code: so.Mapped[str | None] = so.mapped_column(sa.String(2), index=True)
+    total_credits: so.Mapped[int] = so.mapped_column(sa.Integer, default=0)
+
+    instagram_url: so.Mapped[str | None] = so.mapped_column(sa.String(256))
+    youtube_url: so.Mapped[str | None] = so.mapped_column(sa.String(256))
+    website_url: so.Mapped[str | None] = so.mapped_column(sa.String(256))
+
+    flights: so.Mapped[list["Flight"]] = so.relationship(
+        "Flight", back_populates="pilot", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<User {self.username}>"

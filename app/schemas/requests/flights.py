@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl
+from pydantic import BaseModel, EmailStr, Field
 
-from app.models.flight import FlightTheme
+from app.models.flight import FlightStatus, FlightTheme
 
 
 class PilotSubmission(BaseModel):
@@ -28,7 +28,6 @@ class PilotSubmission(BaseModel):
 
 
 class FlightSubmissionRequest(BaseModel):
-    video_url: HttpUrl = Field(..., description="YouTube/Vimeo URL")
     lat: float = Field(..., ge=-90, le=90)
     lng: float = Field(..., ge=-180, le=180)
 
@@ -53,3 +52,19 @@ class FlightSubmissionRequest(BaseModel):
         max_length=2,
         description="ISO 3166-1 alpha-2 country code (optional; can be derived later).",
     )
+
+
+class FlightUpdateRequest(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lng: float | None = Field(default=None, ge=-180, le=180)
+    country_code: str | None = Field(default=None, min_length=2, max_length=2)
+    drone_type: str | None = None
+    duration_seconds: int | None = Field(default=None, ge=0)
+    theme: FlightTheme | None = None
+    tags: list[str] | None = None
+    credits: int | None = Field(default=None, ge=0)
+    status: FlightStatus | None = None
+    rejected_reason: str | None = None
+    pilot_id: int | None = None

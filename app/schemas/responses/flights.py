@@ -13,6 +13,7 @@ class PilotSummary(BaseModel):
     username: str | None = Field(default=None)
     display_name: str | None = Field(default=None)
     country_code: str | None = Field(default=None)
+    email: str | None = Field(default=None)
 
     class Config:
         from_attributes = True
@@ -20,8 +21,7 @@ class PilotSummary(BaseModel):
 
 class FlightResponse(BaseResponse):
     status: FlightStatus
-    video_url: str
-    video_provider: str
+    video_path: str
 
     title: str | None = None
     description: str | None = None
@@ -51,7 +51,7 @@ class FlightResponse(BaseResponse):
 class FlightSummary(BaseModel):
     id: int
     title: str | None = None
-    video_url: str
+    video_path: str
     lat: float
     lng: float
     country_code: str | None = None

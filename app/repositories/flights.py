@@ -7,8 +7,9 @@ import sqlalchemy as sa
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
+from app.models import Role
 from app.models.flight import Flight, FlightStatus, FlightTheme
-from app.models.pilot import Pilot
+from app.models.user import User
 from core.repository import BaseRepository
 
 
@@ -21,7 +22,10 @@ class FlightRepository(BaseRepository[Flight]):
         offset: int,
     ) -> Sequence[Flight]:
         query = select(Flight).options(selectinload(Flight.pilot))
-        query = query.where(Flight.status == FlightStatus.APPROVED)
+
+        status_filter = filters.get("status") if filters else None
+        if status_filter is None:
+            query = query.where(Flight.status == FlightStatus.APPROVED)
 
         if bbox:
             min_lng, min_lat, max_lng, max_lat = bbox
@@ -54,8 +58,8 @@ class FlightRepository(BaseRepository[Flight]):
         if (pilot_name := filters.get("pilot_name")):
             query = query.join(Flight.pilot).where(
                 sa.or_(
-                    Pilot.username.ilike(f"%{pilot_name}%"),
-                    Pilot.display_name.ilike(f"%{pilot_name}%"),
+                    User.username.ilike(f"%{pilot_name}%"),
+                    User.display_name.ilike(f"%{pilot_name}%"),
                 )
             )
 
@@ -84,16 +88,6 @@ class FlightRepository(BaseRepository[Flight]):
 
         return query
 
-    async def list_by_pilot(self, pilot_id: int) -> Sequence[Flight]:
-        query = (
-            select(Flight)
-            .options(selectinload(Flight.pilot))
-            .where(Flight.pilot_id == pilot_id)
-            .order_by(Flight.created_at.desc())
-        )
-        result = await self.session.execute(query)
-        return result.scalars().all()
-
     async def top_pilots(
         self,
         country_code: str | None,
@@ -110,29 +104,32 @@ class FlightRepository(BaseRepository[Flight]):
 
         query = (
             select(
-                Pilot.id.label("pilot_id"),
-                Pilot.username,
-                Pilot.display_name,
-                Pilot.country_code,
+                User.id.label("pilot_id"),
+                User.username,
+                User.display_name,
+                User.country_code,
                 func.count(Flight.id).label("flights_count"),
                 func.coalesce(func.sum(Flight.credits), 0).label("total_credits"),
                 func.coalesce(func.sum(Flight.views), 0).label("total_views"),
                 metric_column.label("metric_value"),
             )
-            .join(Flight, Flight.pilot_id == Pilot.id)
-            .where(Flight.status == FlightStatus.APPROVED)
+            .join(User, Flight.pilot_id == User.id)
+            .where(
+                Flight.status == FlightStatus.APPROVED,
+                User.role == Role.PILOT,
+            )
             .group_by(
-                Pilot.id,
-                Pilot.username,
-                Pilot.display_name,
-                Pilot.country_code,
+                User.id,
+                User.username,
+                User.display_name,
+                User.country_code,
             )
             .order_by(sa.desc(metric_column))
             .limit(limit)
         )
 
         if country_code:
-            query = query.where(Pilot.country_code == country_code)
+            query = query.where(User.country_code == country_code)
 
         if start:
             query = query.where(Flight.created_at >= start)
